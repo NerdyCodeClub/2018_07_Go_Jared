@@ -19,3 +19,9 @@ git config http.sslVerify "false"
 ```
 
 After running the above commands you should be able to clone git repos & run the **go get** command within VSCode.
+
+# Install Delve To Enable Debugging
+Run the following command to install delve. This will allow you to debug any go apps you write in VSCode.
+```sh
+go get -u github.com/derekparker/delve/cmd/dlv
+```
