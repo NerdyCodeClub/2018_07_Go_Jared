@@ -1,0 +1,138 @@
+---------------------------------------------------------------------------------------------------------------
+@max
+
+GO routines and synchronization
+
+---------------------------------------------------------------------------------------------------------------
+
+package main
+import "fmt"
+import "math/rand"
+
+
+func main() {
+
+	var a *[][]int
+	var b *[][]int
+	var ab *[][]int
+
+	ab = MultiplyMatricesTest(&a, &b)
+	
+	fmt.Println(*a)
+	fmt.Println(*b)
+	fmt.Println(*ab)
+}
+
+func MultiplyMatricesTest(a **[][]int, b **[][]int) *[][]int {
+
+	*a = CreateMatrix(1000, 1000)
+	*b = CreateMatrix(1000, 1000)
+
+	var ab *[][]int
+
+	for r := 0; r < len(**a); r++ {
+		for c := 0; c < len((**a)[r]); c++ {
+			(**a)[r][c] = rand.Int() % 1000
+		}
+	}
+
+	for r := 0; r < len(**b); r++ {
+		for c := 0; c < len((**b)[r]); c++ {
+			(**b)[r][c] = rand.Int() % 1000
+		}
+	}
+
+	maxProcesses := 100
+	ab = MultiplyMatrices(*a, *b, maxProcesses)
+	
+	return ab
+}
+
+
+func MultiplyMatrices(a *[][]int, b *[][]int, maxProcesses int) *[][]int {
+
+	var rows1 int = len(*a);
+	var columns1 int = len((*a)[0]);
+
+	var rows2 int = len(*b);
+	var columns2 int = len((*b)[0]);
+
+	if (columns1 == rows2) {
+
+		var ab *[][]int
+		
+		ab = CreateMatrix(rows1, columns2)
+		
+		var elementsN int = rows1 * columns2
+		var prN = Min(elementsN, maxProcesses);
+
+		var sliceSize = elementsN / prN;
+	
+		c := make(chan int)
+	
+		for i := 0; i < prN; i++ {
+			go Multiply(a, b, ab, i, elementsN, prN, sliceSize, c)
+		}
+
+		for i := 0; i < prN; i++ {
+			<-c
+		}
+	
+		return ab
+	}
+
+	return nil;
+}
+
+
+func CreateMatrix(rows int, columns int) *[][]int {
+
+	var g *[][]int
+
+	g1 := make([][]int, rows)
+	g = &g1
+
+	for i := 0; i < rows; i++ {
+		(*g)[i] = make([]int, columns)
+	}
+
+
+	return g;
+}
+
+
+func Min (x, y int) int {
+	if (x <= y) {
+		return x
+		} else {
+		return y
+	}
+}
+
+
+func Multiply(a *[][]int, b *[][]int, ab *[][]int, slice int, elementsN int, prN int, sliceSize int, c chan int) {
+
+	var firstEl int = slice * sliceSize
+	var lastEl int = (slice + 1) * sliceSize - 1
+	
+//	fmt.Println(slice, firstEl, lastEl)
+
+
+	if (slice == prN - 1) {
+		lastEl = elementsN - 1
+	}
+	
+
+	for i := firstEl; i <= lastEl; i++ {
+		var row = i / len((*b)[0])
+		var column = i - row * len((*b)[0])
+		
+		for i1 := 0; i1 < len((*a)[0]); i1++ {
+			(*ab)[row][column] += (*a)[row][i1] * (*b)[i1][column]
+		}
+		
+//		fmt.Println(row, column)
+	}
+	
+	c <- 0
+}
